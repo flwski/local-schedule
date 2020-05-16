@@ -1,2 +1,2 @@
 # local-schedule
-Aplicativo para agendamentos de tarefas com armazenamento local.
+📆 Aplicativo para agendamentos de tarefas com armazenamento local.

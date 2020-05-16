@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, ScrollView, StyleSheet, Text, TouchableOpacity, Alert } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { Calendar, CalendarList, Agenda, LocaleConfig } from 'react-native-calendars';
+import { CalendarList, LocaleConfig } from 'react-native-calendars';
+import Timeline from 'react-native-timeline-flatlist'
 
 LocaleConfig.locales['pt-br'] = {
     monthNames: ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'],
@@ -15,6 +16,14 @@ LocaleConfig.defaultLocale = 'pt-br';
 const Home = () => {
 
     const [selected, setSelected] = useState(undefined);
+    const [currentSchedules, setCurrentSchedules] = useState([
+        { time: '09:00', title: '09:00 - BreakFast', description: 'I had breakfast from a wonderful restaurant and the food was super tasty.' },
+        { time: '11:00', title: '11:00 - Tea Break', description: 'I made a tea myself and drink it with a packet of biscuits.' },
+        { time: '13:00', title: '13:00 - Lunch', description: 'I ate lunch from nearby hotel but food was just okay.' },
+        { time: '16:00', title: '16:00 - Tea Break', description: 'Ate two snacks.' },
+        { time: '20:00', title: '20:00 - Dinner', description: 'This time I prepared dinner looking a youtube tutorial.' }
+    ]
+    );
 
     useEffect(() => {
 
@@ -33,17 +42,16 @@ const Home = () => {
 
             <TouchableOpacity activeOpacity={.8} style={styles.navbar}>
                 <Text style={styles.navbarText}>Olá, Fernando</Text>
-                <Icon name="chevron-right" size={15} color="#0f224d" style={{marginTop: 2}}/>
+                <Icon name="chevron-right" size={15} color="#0f224d" style={{ marginTop: 2 }} />
             </TouchableOpacity>
 
             <View style={styles.header}>
                 <View>
-                    <Text style={styles.title}>Suas Tarefas de Maio</Text>
-                    <Text style={styles.subTitle}>16 de Maio de 2020</Text>
+                    <Text style={styles.title}>Maio 2020</Text>  
+                    <Text style={styles.subTitle}>Gerencie suas tarefas</Text>
                 </View>
 
-                <TouchableOpacity style={styles.btnAdd}>
-
+                <TouchableOpacity TouchableOpacity={.9} style={styles.btnAdd} >
                     <Text style={styles.btnAddText}>Adicionar</Text>
                 </TouchableOpacity>
 
@@ -81,6 +89,29 @@ const Home = () => {
 
             <View style={styles.containerEvents}>
 
+                <TouchableOpacity style={{marginLeft: 10, marginTop: 10}}>
+                    <Text style={{ color: '#0f224d' }}>Eventos do dia:</Text>
+                    <View style={styles.containerCurrentDate}>
+                        <Text style={styles.currentDay}>20 de Maio</Text>
+                        <Icon name="chevron-right" size={20} color="#0f224d" />
+                    </View>
+                </TouchableOpacity>
+
+
+                <Timeline
+                    circleSize={15}                    
+                    separatorStyle={{ backgroundColor: '#d9d4d4' }}
+                    circleColor='#2cc09c'
+                    lineColor='#d9d4d4'
+                    timeStyle={styles.time}
+                    titleStyle={styles.titleStyle}
+                    descriptionStyle={styles.description}
+                    style={styles.list}
+                    data={currentSchedules}
+                    onEventPress={(e)=> Alert.alert(JSON.stringify(e))}
+                    showTime={false}
+                    detailContainerStyle={{marginBottom: 20, padding: 10, backgroundColor: "#fff", borderRadius: 10, marginRight:10}}
+                />
             </View>
 
         </ScrollView>
@@ -97,7 +128,7 @@ const styles = StyleSheet.create({
         padding: 0,
         marginTop: 20,
         marginLeft: 20,
-        marginBottom: 5,   
+        marginBottom: 5,
     },
     navbarText: {
         fontSize: 15,
@@ -106,7 +137,7 @@ const styles = StyleSheet.create({
     },
     header: {
         marginLeft: 20,
-        marginTop: 0,
+        marginTop: 10,
         marginBottom: 20,
         marginRight: 20,
         flexDirection: 'row'
@@ -128,7 +159,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        marginLeft: 25,
+        marginLeft: 100,
         elevation: 5
 
     },
@@ -139,12 +170,34 @@ const styles = StyleSheet.create({
         fontSize: 15,
     },
     containerEvents: {
-        backgroundColor: '#f0f4fd',
-        height: 100,
-        marginTop: -10,
+        backgroundColor: '#f1f5fe',
+        padding: 10,
+        marginTop: -20,
         borderTopRightRadius: 15,
         borderTopLeftRadius: 15
-    }
+    },
+    list: {
+        flex: 1,
+        marginTop: 20,
+    },    
+    description: {
+        color: 'gray',
+    },
+    titleStyle: {
+        color: '#0f224d'
+    },
+    containerCurrentDate: {
+        flexDirection: 'row',
+        marginBottom: 10,
+        marginTop: 2,
+        alignItems: 'center',
+        
+    },
+    currentDay: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: '#0f224d'
+    },
 });
 
 export default Home;

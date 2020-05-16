@@ -13,7 +13,7 @@ LocaleConfig.locales['pt-br'] = {
 };
 LocaleConfig.defaultLocale = 'pt-br';
 
-const Home = () => {
+const Home = ({navigation}) => {
 
     const [selected, setSelected] = useState(undefined);
     const [currentSchedules, setCurrentSchedules] = useState([
@@ -52,7 +52,7 @@ const Home = () => {
                 </View>
 
                 <TouchableOpacity TouchableOpacity={.9} style={styles.btnAdd} >
-                    <Text style={styles.btnAddText}>Adicionar</Text>
+                  <Icon name="plus" size={20} color="#fff" />
                 </TouchableOpacity>
 
             </View>
@@ -78,10 +78,10 @@ const Home = () => {
                     onDayPress={(day) => onDayPress(day)}
                     markedDates={{
                         '2020-05-16': { selected: true, selectedColor: '#0f224d' },
-                        '2020-05-23': { marked: true, dotColor: '#0f224d' },
-                        '2020-05-24': { marked: true, dotColor: '#0f224d' },
-                        '2020-05-25': { marked: true, dotColor: '#0f224d' },
-                        '2020-05-26': { marked: true, dotColor: '#0f224d' },
+                        '2020-05-23': { marked: true, dotColor: '#ff6f60' },
+                        '2020-05-24': { marked: true, dotColor: '#ff6f60' },
+                        '2020-05-25': { marked: true, dotColor: '#ff6f60' },
+                        '2020-05-26': { marked: true, dotColor: '#ff6f60' },
                     }}
 
                 />
@@ -97,12 +97,11 @@ const Home = () => {
                     </View>
                 </TouchableOpacity>
 
-
                 <Timeline
-                    circleSize={15}                    
+                    circleSize={13}                    
                     separatorStyle={{ backgroundColor: '#d9d4d4' }}
-                    circleColor='#2cc09c'
-                    lineColor='#d9d4d4'
+                    circleColor='#ff6f60'
+                    lineColor='#d9d4d4'                   
                     timeStyle={styles.time}
                     titleStyle={styles.titleStyle}
                     descriptionStyle={styles.description}
@@ -110,7 +109,7 @@ const Home = () => {
                     data={currentSchedules}
                     onEventPress={(e)=> Alert.alert(JSON.stringify(e))}
                     showTime={false}
-                    detailContainerStyle={{marginBottom: 20, padding: 10, backgroundColor: "#fff", borderRadius: 10, marginRight:10}}
+                    detailContainerStyle={{marginBottom: 20, padding:10, backgroundColor: "#fff", borderRadius: 10, marginRight:10}}
                 />
             </View>
 
@@ -154,14 +153,14 @@ const styles = StyleSheet.create({
     },
     btnAdd: {
         backgroundColor: '#2ec5a0',
-        width: 90,
-        borderRadius: 100,
+        width: 45,
+        height: 45,
+        borderRadius: 50,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        marginLeft: 100,
+        marginLeft: 143,
         elevation: 5
-
     },
     btnAddText: {
         color: '#fff',

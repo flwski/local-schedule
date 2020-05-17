@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import { View, StatusBar } from 'react-native';
 import 'react-native-gesture-handler';
-
+console.disableYellowBox = true;
 
 import Routes from './routes';
 

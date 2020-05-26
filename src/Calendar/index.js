@@ -6,6 +6,8 @@ import Timeline from 'react-native-timeline-flatlist'
 import Modal from 'react-native-modalbox';
 import moment from 'moment';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import AsyncStorage from '@react-native-community/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 
 const WIDTH = Dimensions.get('window').width;
 const HEIGHT = Dimensions.get('window').height;
@@ -29,37 +31,64 @@ const Home = ({ navigation }) => {
     const [hasEvents, setHasEvents] = useState(false);
     const [dayToString, setDayToString] = useState('');
     const [dayWeek, setDayWeek] = useState('');
-
     const [titulo, setTitulo] = useState('');
     const [descricao, setDescricao] = useState('');
-
     const [date, setDate] = useState(new Date());
     const [show, setShow] = useState(false);
-
     const [monthNames, setMonthNames] = useState(['', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']);
-    const [currentSchedules, setCurrentSchedules] = useState([
-        { time: '09:00', title: '09:00 - BreakFast', description: 'I had breakfast from a wonderful restaurant and the food was super tasty.' },
-        { time: '11:00', title: '11:00 - Tea Break', description: 'I made a tea myself and drink it with a packet of biscuits.' },
-        { time: '13:00', title: '13:00 - Lunch', description: 'I ate lunch from nearby hotel but food was just okay.' },
-        { time: '16:00', title: '16:00 - Tea Break', description: 'Ate two snacks.' },
-        { time: '20:00', title: '20:00 - Dinner', description: 'This time I prepared dinner looking a youtube tutorial.' }
-    ]
-    );
+
+    const [calendarSchedules, setCalendarSchedules] = useState([]);
+    const [timelineSchedules, setTimelineSchedules] = useState([]);
+    const [visibleModalConfirm, setVisibleModalConfirm] = useState(false);
+    const [visibleModalDelete, setVisibleModalDelete] = useState(false);
+    const [nome, setNome] = useState('');
+
+    const [schedule, setSchedule] = useState('');
 
     useEffect(() => {
         let today = moment().format('YYYY-MM-DD').toString();
+        manageSchedules(today, false);
         setSelected(today);
-        setMarkedDates({ [today]: { selected: true, selectedColor: '#0f224d' } });
-        setDayToString(`${today.split('-')[2]} de ${month}`);
+        setCalendarSchedules({ [today]: { selected: true, selectedColor: '#0f224d' } });
+        setDayToString(`${today.split('-')[2]} de ${monthNames[parseInt(today.split('-')[1])]}`);
+        getName();
     }, []);
+
+    useFocusEffect(
+        React.useCallback(() => {
+            let today = moment().format('YYYY-MM-DD').toString();
+            manageSchedules(today, false);
+            setSelected(today);
+            setCalendarSchedules({ [today]: { selected: true, selectedColor: '#0f224d' } });
+            setDayToString(`${today.split('-')[2]} de ${monthNames[parseInt(today.split('-')[1])]}`);
+            getName();
+        }, [])
+    );
+
+    getName = async () => {
+        try {
+            let nome = await AsyncStorage.getItem('@nome');
+            setNome(nome);
+        } catch (e) {
+            Alert.alert(e.toString());
+        }
+    }
 
     onDayPress = (day) => {
         setSelected(day.dateString);
-        setMarkedDates({ [day.dateString]: { selected: true, selectedColor: '#0f224d' } });
-        setDayToString(`${day.dateString.split('-')[2]} de ${month}`);
+        setCalendarSchedules({ [day.dateString]: { selected: true, selectedColor: '#0f224d' } });
+        setDayToString(`${day.dateString.split('-')[2]} de ${monthNames[parseInt(day.dateString.split('-')[1])]}`);
+        manageSchedules(day.dateString, false);
+        let month = [{
+            year: day.dateString.split('-')[0],
+            month: parseInt(day.dateString.split('-')[1])
+        }];
+        onMonthChange(month);
+
     }
 
     onMonthChange = (month) => {
+        //Alert.alert(JSON.stringify(month));
         setMonth(monthNames[month[0].month.toString()]);
         setYear(month[0].year.toString());
     }
@@ -80,146 +109,337 @@ const Home = ({ navigation }) => {
         setDescricao('');
     }
 
-    return (<>
-        <ScrollView style={styles.body}>
-            <View style={{ backgroundColor: '#fff' }}>
-                <TouchableOpacity activeOpacity={.8} style={styles.navbar}>
-                    <Text style={styles.navbarText}>Olá, Fernando</Text>
-                    <Icon name="chevron-right" size={15} color="#0f224d" style={{ marginTop: 2 }} />
-                </TouchableOpacity>
+    manageSchedules = async (current, changes = false) => {
+        try {
 
-                <View style={styles.header}>
-                    <View>
-                        <Text style={styles.title}>{month} {year}</Text>
-                        <Text style={styles.subTitle}>Gerencie suas tarefas</Text>
-                    </View>
+            let schedules = await AsyncStorage.getItem('@schedules');
 
-                    <TouchableOpacity TouchableOpacity={.9} style={styles.btnAdd} onPress={() => setVisibleModal(true)}>
-                        <Icon name="plus" size={20} color="#fff" />
+            if (schedules) {                
+                let json = JSON.parse(schedules);
+
+                myArr = [];
+                const nextDays = [];
+
+                json.forEach((e) => {
+                    if (e.date === current) {
+                        myArr.push({
+                            time: e.id,
+                            title: e.title,
+                            description: e.desc
+                        });
+                    }
+                    nextDays.push(e.date);
+
+                });
+
+                let newDaysObject = {};
+
+                nextDays.forEach((day) => {
+                    newDaysObject[day] = {
+                        selected: true,
+                        selectedColor: '#a5b3d4'
+                    };
+                });
+
+                if (nextDays.includes(current)) {
+                    newDaysObject[current] = {
+                        selected: true,
+                        selectedColor: '#0f224d',
+                    };
+                }
+                else {
+                    newDaysObject[current] = {
+                        selected: true,
+                        selectedColor: '#0f224d',
+                    };
+                }
+
+                setCalendarSchedules(newDaysObject);
+                setTimelineSchedules(myArr);
+
+                if (myArr.length > 0) {
+                    setHasEvents(true);
+                }
+                else {
+                    setHasEvents(false);
+                }
+            }
+            else {
+                setHasEvents(false);              
+            }
+
+        } catch (e) {
+            Alert.alert(e.toString());
+        }
+    }
+
+    createSchedule = async () => {
+        let seq = 0;
+        let comp = Math.floor(Math.random() * 10);
+
+        while (seq === comp) {
+            comp = Math.floor(Math.random() * 10);
+        }
+
+        try {
+            let schedules = await AsyncStorage.getItem('@schedules');
+            let myArr = [];
+            myArr.push({
+                id: comp,
+                title: titulo,
+                desc: descricao,
+                date: selected
+            });
+
+            if (schedules) {
+                let json = JSON.parse(schedules);
+                json.forEach((e) => {
+                    myArr.push(e);
+                });
+            }
+            await AsyncStorage.setItem('@schedules', JSON.stringify(myArr));
+            manageSchedules(selected, false);
+            setVisibleModal(false);
+            setVisibleModalConfirm(true);
+
+        } catch (e) {
+            Alert.alert(e.toString());
+        }
+    }
+
+    handleAgendamento = (e) => {
+        setSchedule(e);
+        setVisibleModalDelete(true);
+    }
+
+    deleteSchedule = async (id) => {
+        try {
+
+            let schedules = JSON.parse(await AsyncStorage.getItem('@schedules'));
+            let arr = [];
+
+            schedules.forEach((e) => {
+                if (e.id !== id) {
+                    arr.push(e);
+                }
+            });
+
+            await AsyncStorage.setItem('@schedules', JSON.stringify(arr));
+            setVisibleModalDelete(false);
+
+            manageSchedules(selected, false);
+
+        } catch (e) {
+            Alert.alert(e.toString());
+        }
+    }
+
+    return (
+        <>
+            <ScrollView style={styles.body}>
+                <View style={{ backgroundColor: '#fff' }}>
+                    <TouchableOpacity onPress={() => navigation.navigate('Perfil')} activeOpacity={.8} style={styles.navbar}>
+                        <Text style={styles.navbarText}>Olá, {nome}</Text>
+                        <Icon name="chevron-right" size={15} color="#0f224d" style={{ marginTop: 2 }} />
                     </TouchableOpacity>
 
-                </View>
-            </View>
+                    <View style={styles.header}>
+                        <View>
+                            <Text style={styles.title}>{month} {year}</Text>
+                            <Text style={styles.subTitle}>Gerencie suas tarefas</Text>
+                        </View>
 
-            <View style={styles.calendarContainer}>
-                <CalendarList
-                    pastScrollRange={24}
-                    futureScrollRange={24}
-                    horizontal
-                    pagingEnabled
-                    onVisibleMonthsChange={(months) => { onMonthChange(months) }}
-                    style={{ borderBottomWidth: 1, borderBottomColor: 'lightgrey' }}
-                    theme={{
-                        todayTextColor: '#2cc09c',
-                        textDayFontWeight: 'bold',
-                        textDayFontSize: 14,
-                        "stylesheet.calendar.header": {
-                            header: {
-                                height: 0,
-                                opacity: 0
+                        <TouchableOpacity TouchableOpacity={.9} style={styles.btnAdd} onPress={() => setVisibleModal(true)}>
+                            <Icon name="plus" size={20} color="#fff" />
+                        </TouchableOpacity>
+
+                    </View>
+                </View>
+
+                <View style={styles.calendarContainer}>
+                    <CalendarList
+                        pastScrollRange={24}
+                        futureScrollRange={24}
+                        horizontal
+                        pagingEnabled
+                        onVisibleMonthsChange={(months) => { onMonthChange(months) }}
+                        style={{ borderBottomWidth: 1, borderBottomColor: 'lightgrey' }}
+                        theme={{
+                            todayTextColor: '#2cc09c',
+                            textDayFontWeight: 'bold',
+                            dotColor: '#ff6f60',
+                            textDayFontSize: 14,
+                            "stylesheet.calendar.header": {
+                                header: {
+                                    height: 0,
+                                    opacity: 0
+                                }
                             }
-                        }
-                    }}
-                    hideExtraDays={false}
-                    style={styles.calendar}
-                    onDayPress={(day) => onDayPress(day)}
-                    markedDates={markedDates}
+                        }}
+                        current={selected}
+                        hideExtraDays={false}
+                        style={styles.calendar}
+                        onDayPress={(day) => onDayPress(day)}
+                        markedDates={calendarSchedules}
 
-                />
-            </View>
-
-            <View style={styles.containerEvents}>
-
-                <TouchableOpacity style={{ marginLeft: 10, marginTop: 10 }}>
-                    <Text style={{ color: '#0f224d' }}>Eventos do dia:</Text>
-                    <View style={styles.containerCurrentDate}>
-                        <Text style={styles.currentDay}>{dayToString}</Text>
-                        <Icon name="chevron-right" size={20} color="#0f224d" />
-                    </View>
-                </TouchableOpacity>
-
-                <Timeline
-                    circleSize={13}
-                    separatorStyle={{ backgroundColor: '#d9d4d4' }}
-                    circleColor='#ff6f60'
-                    lineColor='#d9d4d4'
-                    timeStyle={styles.time}
-                    titleStyle={styles.titleStyle}
-                    descriptionStyle={styles.description}
-                    style={[styles.list, { display: hasEvents ? 'flex' : 'none' }]}
-                    data={currentSchedules}
-                    onEventPress={(e) => Alert.alert(JSON.stringify(e))}
-                    showTime={false}
-                    detailContainerStyle={{ marginBottom: 20, padding: 10, backgroundColor: "#fff", borderRadius: 10, marginRight: 10 }}
-                />
-
-                <View style={[styles.viewNoEvents, { display: hasEvents ? 'none' : 'flex' }]}>
-                    <Image source={require('../../resources/img/calendar.png')} style={[styles.image]} />
-                    <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#131426', marginTop: -20 }}>Nenhuma tarefa agendada para esse dia</Text>
-                    <Text style={{ color: '#a4a4a4' }}>As tarefas agendadas aparecerão aqui</Text>
+                    />
                 </View>
-            </View>
 
-        </ScrollView>
+                <View style={styles.containerEvents}>
 
-        <Modal
-            onClosed={() => handleCloseModal()}
-            style={{ height: HEIGHT*0.95 , backgroundColor: '#fff', elevation: 11, borderTopRightRadius:5, borderTopLeftRadius:5 }}
-            animationDuration={1000}
-            swipeToClose={true}
-            entry="bottom"
-            backButtonClose={true}
-            position={'bottom'}
-            aboveStatusBar={true}
-            isOpen={visibleModal}>
-            <View>
-
-                <View style={[styles.topoAgenda]}>
-                    <View>
-                        <Text style={styles.topoAgendaTextSub}>Nova tarefa para</Text>
-                        <Text style={styles.topoAgendaText}>{dayToString} de {year}</Text>
+                    <View style={{ marginLeft: 10, marginTop: 10 }}>
+                        <Text style={{ color: '#0f224d' }}>Tarefas do dia:</Text>
+                        <View style={styles.containerCurrentDate}>
+                            <Text style={styles.currentDay}>{dayToString}</Text>
+                        </View>
                     </View>
-                    <View style={{justifyContent:'center', position:'absolute', right:20, marginTop: 30}}>
-                        <TouchableOpacity>
-                            <Icon name="close" size={20} color="#fff" />
+
+                    <Timeline
+                        circleSize={13}
+                        separatorStyle={{ backgroundColor: '#d9d4d4' }}
+                        circleColor='#ff6f60'
+                        lineColor='#d9d4d4'
+                        timeStyle={styles.time}
+                        titleStyle={styles.titleStyle}
+                        descriptionStyle={styles.description}
+                        style={[styles.list, { display: hasEvents ? 'flex' : 'none' }]}
+                        data={timelineSchedules}
+                        onEventPress={(e) => handleAgendamento(e)}
+                        showTime={false}
+                        detailContainerStyle={{ marginBottom: 20, padding: 10, backgroundColor: "#fff", borderRadius: 10, marginRight: 10 }}
+                    />
+
+                    <View style={[styles.viewNoEvents, { display: hasEvents ? 'none' : 'flex' }]}>
+                        <Image source={require('../../resources/img/calendar.png')} style={[styles.image]} />
+                        <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#131426', marginTop: -20 }}>Nenhuma tarefa agendada para esse dia</Text>
+                        <Text style={{ color: '#a4a4a4' }}>As tarefas agendadas aparecerão aqui</Text>
+                    </View>
+                </View>
+
+            </ScrollView>
+
+            <Modal
+                onClosed={() => handleCloseModal()}
+                style={{ height: HEIGHT * 0.95, backgroundColor: '#fff', elevation: 11, borderTopRightRadius: 5, borderTopLeftRadius: 5 }}
+                animationDuration={1000}
+                swipeToClose={true}
+                entry="bottom"
+                backButtonClose={true}
+                position={'bottom'}
+                aboveStatusBar={true}
+                isOpen={visibleModal}>
+                <View>
+
+                    <View style={[styles.topoAgenda]}>
+                        <View>
+                            <Text style={styles.topoAgendaTextSub}>Nova tarefa para</Text>
+                            <Text style={styles.topoAgendaText}>{dayToString} de {year}</Text>
+                        </View>
+                        <View style={{ justifyContent: 'center', position: 'absolute', right: 20, marginTop: 30 }}>
+                            <TouchableOpacity activeOpacity={.8} onPress={() => setVisibleModal(false)}>
+                                <Icon name="chevron-down" size={20} color="#fff" />
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+
+                    <View style={styles.viewForm}>
+
+                        <View>
+                            <TextInput
+                                style={styles.titleInput}
+                                placeholder="Título"
+                                value={titulo}
+                                onChangeText={setTitulo}
+                            />
+                        </View>
+
+                        <View >
+                            <TextInput
+                                style={styles.DescInput}
+                                placeholder="Descrição"
+                                multiline={true}
+                                numberOfLines={4}
+                                textAlignVertical="top"
+                                value={descricao}
+                                onChangeText={setDescricao}
+                            />
+                        </View>
+
+                        <View>
+                            <TouchableOpacity onPress={() => createSchedule()} activeOpacity={.9} style={[styles.btnsalvar, { display: titulo === '' || descricao === '' ? 'none' : 'flex' }]}>
+                                <Text style={styles.btnsalvarText}>Salvar</Text>
+                            </TouchableOpacity>
+                        </View>
+
+                    </View>
+
+                </View>
+            </Modal>
+
+            <Modal
+                onClosed={() => setVisibleModalConfirm(false)}
+                style={{ height: HEIGHT * 0.40, backgroundColor: '#fff', borderTopRightRadius: 5, borderTopLeftRadius: 5 }}
+                animationDuration={1000}
+                swipeToClose={true}
+                entry="bottom"
+                backButtonClose={true}
+                position={'bottom'}
+                aboveStatusBar={true}
+                isOpen={visibleModalConfirm}>
+                <View>
+                    <View style={{ justifyContent: 'center', alignItems: 'center', height: 300, width: 250, borderRadius: 250, alignSelf: 'center', marginTop: -80, backgroundColor: '#fff' }}>
+                        <Image source={require('../../resources/img/check.png')} style={{ resizeMode: 'contain', height: 200, width: 200, marginTop: -70 }} />
+                    </View>
+
+                    <View style={{ marginTop: -90 }}>
+                        <Text style={{ alignSelf: 'center', fontSize: 18, fontWeight: 'bold', color: '#131426' }}>Tarefa adicionada com sucesso!</Text>
+                        <Text style={{ alignSelf: 'center', fontSize: 15, color: '#a4a4a4' }}>Sua tarefa foi adicionada com sucesso ao calendário</Text>
+                    </View>
+
+                    <View style={{ width: WIDTH, alignItems: 'center', marginTop: 20 }}>
+                        <TouchableOpacity style={[styles.btnsalvar, { flexDirection: 'row', height: 60 }]} onPress={() => setVisibleModalConfirm(false)}>
+                            <Text style={styles.btnAddText}>Continuar</Text>
+                            <Icon name="chevron-right" size={30} color="#fff" style={{ marginLeft: 5 }} />
                         </TouchableOpacity>
                     </View>
                 </View>
 
-                <View style={styles.viewForm}>
+            </Modal>
 
-                    <View>
-                        <TextInput
-                            style={styles.titleInput}
-                            placeholder="Título"
-                            value={titulo}
-                            onChangeText={setTitulo}
-                        />
+            <Modal
+                onClosed={() => setVisibleModalDelete(false)}
+                style={{ height: HEIGHT * 0.40, backgroundColor: '#fff', borderTopRightRadius: 5, borderTopLeftRadius: 5 }}
+                animationDuration={1000}
+                swipeToClose={true}
+                entry="bottom"
+                backButtonClose={true}
+                position={'bottom'}
+                aboveStatusBar={true}
+                isOpen={visibleModalDelete}>
+                <View>
+                    <View style={{ justifyContent: 'center', alignItems: 'center', height: 300, width: 250, borderRadius: 250, alignSelf: 'center', marginTop: -80, backgroundColor: '#fff' }}>
+                        <Image source={require('../../resources/img/trash.png')} style={{ resizeMode: 'contain', height: 200, width: 200, marginTop: -70 }} />
                     </View>
 
-                    <View >
-                        <TextInput
-                            style={styles.DescInput}
-                            placeholder="Descrição"
-                            multiline={true}
-                            numberOfLines={4}
-                            textAlignVertical="top"
-                            value={descricao}
-                            onChangeText={setDescricao}
-                        />
+                    <View style={{ marginTop: -90 }}>
+                        <Text style={{ alignSelf: 'center', fontSize: 18, fontWeight: 'bold', color: '#131426' }}>Deseja excluir a tarefa abaixo?</Text>
+                        <Text style={{ alignSelf: 'center', fontSize: 18, color: '#a4a4a4', marginTop: 15 }}>"{schedule.title}"</Text>
                     </View>
 
-                    <View>
-                        <TouchableOpacity activeOpacity={.9} style={[styles.btnsalvar,{display: titulo === '' || descricao === '' ? 'none' : 'flex'}]}>
-                            <Text style={styles.btnsalvarText}>Salvar</Text>
+                    <View style={{ width: WIDTH, alignItems: 'center', marginTop: 10, flexDirection: 'row', justifyContent: 'space-around' }}>
+
+                        <TouchableOpacity onPress={() => deleteSchedule(schedule.time)} style={[styles.btnsalvar, { flexDirection: 'row', height: 60, backgroundColor: '#ff6f60' }]} >
+                            <Text style={styles.btnAddText}>Excluir</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity onPress={() => setVisibleModalDelete(false)} style={[styles.btnsalvar, { flexDirection: 'row', height: 60, backgroundColor: '#fff' }]} >
+                            <Text style={[styles.btnAddText, { color: '#131426' }]}>Fechar</Text>
                         </TouchableOpacity>
                     </View>
-
                 </View>
 
-            </View>
-        </Modal>
-    </>);
+            </Modal>
+        </>);
 }
 
 const styles = StyleSheet.create({
@@ -334,22 +554,21 @@ const styles = StyleSheet.create({
         marginTop: 20
     },
     topoAgenda: {
-        //margin: 20,
         flexDirection: 'row',
-        backgroundColor:'#131426',
-        padding:20,
+        backgroundColor: '#131426',
+        padding: 20,
         elevation: 10,
-        borderTopRightRadius:5,
-        borderTopLeftRadius:5
+        borderTopRightRadius: 5,
+        borderTopLeftRadius: 5
     },
     topoAgendaText: {
         fontSize: 20,
         fontWeight: 'bold',
-        color:'#fff'
+        color: '#fff'
     },
     topoAgendaTextSub: {
         fontSize: 15,
-        color:'#fff'
+        color: '#fff'
     },
     btnsalvar: {
         backgroundColor: '#2ec5a0',

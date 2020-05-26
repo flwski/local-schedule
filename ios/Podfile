@@ -81,6 +81,8 @@ target 'scheduleApp' do
 
   pod 'RNDateTimePicker', :path => '../node_modules/@react-native-community/datetimepicker'
 
+  pod 'RNCAsyncStorage', :path => '../node_modules/@react-native-community/async-storage'
+
   target 'scheduleAppTests' do
     inherit! :complete
     # Pods for testing
